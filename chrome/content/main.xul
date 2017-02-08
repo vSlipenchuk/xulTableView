@@ -1,0 +1,173 @@
+<?xml version="1.0"?>
+<?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
+
+<!--
+ filtered table example. need file with tab-delimited table, example /tmp/1.txt
+ 
+ to lauch -> exec : xulrunner applicaton.ini -filename /tmp/1.txt
+
+-->
+
+<window id="main" title="My App" width="300" height="300"
+xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+
+
+
+
+<hbox flex="0">
+  <label style="display:inline-block;padding-top:5px;"> Filter: </label> <textbox id="filter" flex="1" onkeyup="onFilterChange(event);"  />  
+ </hbox>
+ 
+  <tree flex="1" rows="2" id="mytree">
+
+  <treecols>
+   
+  </treecols>
+
+  <treechildren>
+  
+  </treechildren>
+
+</tree>
+
+
+<script>
+<![CDATA[
+
+/*
+
+//Components.utils.import("resource://gre/modules/FileUtils.jsm");
+*/
+
+function loadFile(file) { // |file| is nsIFile , see https://developer.mozilla.org/en-US/Add-ons/Code_snippets/File_I_O
+var data = "";
+	
+var fstream = Components.classes["@mozilla.org/network/file-input-stream;1"].
+              createInstance(Components.interfaces.nsIFileInputStream);
+var cstream = Components.classes["@mozilla.org/intl/converter-input-stream;1"].
+              createInstance(Components.interfaces.nsIConverterInputStream);
+	
+fstream.init(file, -1, 0, 0);
+cstream.init(fstream, "UTF-8", 0, 0); // you can use another encoding here if you wish
+var str={};
+var  read = 0;
+  do {
+      str={};
+     read = cstream.readString(0xffffffff, str); // read as much as we can and put it in str.value
+    if (read>0)   data += str.value;
+  } while (read != 0);
+
+cstream.close(); // this closes fstream
+	
+return data;	
+}
+
+
+function file2str( filename) {	
+var file = Components.classes["@mozilla.org/file/local;1"].createInstance(Components.interfaces.nsILocalFile);
+file.initWithPath(filename);	
+var d = loadFile(file);
+//alert(d);
+return d;	
+}
+
+
+
+function loadTextData(tbl,Text,Filter) {
+ var cols=tbl.getElementsByTagName('treecols')[0];
+ var i=0, nc = 0;
+//alert("Filter:"+Filter);
+ //alert(Cols.length);
+var rows=Text.split('\n'); // all rows, zero is a columa
+	var Cols=rows[0].split('\t'); // my cols
+	nc = Cols.length;
+	
+if (firsttime) 
+ for(i=0;i<nc;i++) { // its need to do only first time
+   var   cols=tbl.getElementsByTagName('treecols')[0];
+   var   col = document.createElement('treecol');
+	 
+   col.setAttribute("label",Cols[i]);   col.setAttribute("flex","1");    cols.appendChild(col);
+	var   cols=tbl.getElementsByTagName('treecols')[0];
+   if (i == 1) {    var sp = document.createElement('splitter'); cols.appendChild(sp);}
+   }
+firsttime = 0;
+   
+   
+var tc = tbl.getElementsByTagName('treechildren')[0];
+
+    while(tc.hasChildNodes()){
+    tc.removeChild(tc.firstChild);
+  }
+   //alert(Rows.length);
+for(i=1;i<rows.length;i++) {
+  var row=rows[i];
+  if (row == "") continue;
+  if ( (Filter != "") && (row.indexOf(Filter)<0) ) continue; // skip not in filter
+  var r = row.split('\t');;
+  if (r.length>0) {
+	var tc = tbl.getElementsByTagName('treechildren')[0];
+	var ti = document.createElement('treeitem'); tc.appendChild(ti);
+	var tr = document.createElement('treerow');  ti.appendChild(tr);
+	
+	for(j=0;j<nc;j++) {
+	var tc = document.createElement('treecell');  tr.appendChild(tc);
+	tc.setAttribute('label',j<r.length?r[j]:"");
+	}
+}
+     }
+}
+
+function onFilterChange(event) { // called on change filters
+   loadTextData( document.getElementById('mytree'), 
+	 T, event.target.value);
+}
+
+var cmdLine = window.arguments[0];
+     cmdLine = cmdLine.QueryInterface(Components.interfaces.nsICommandLine);
+var filename =  cmdLine.handleFlagWithParam("filename", false);
+var T=""; firsttime = 1;
+
+//alert(filename);
+
+if (filename > "") {
+  document.title = filename;
+  T = file2str(filename); // my text filter here
+  firsttime = 1;
+  loadTextData( document.getElementById('mytree'),  T,  '');  // First Load
+  }
+
+
+  
+function loadData(tbl,Cols,Rows) {
+ var cols=tbl.getElementsByTagName('treecols')[0];
+ var i=0, nc = Cols.length;
+ //alert(Cols.length);
+ for(i=0;i<nc;i++) {
+   var   col = document.createElement('treecol');
+   col.setAttribute("label",Cols[i]);   col.setAttribute("flex","1");    cols.appendChild(col);
+	 
+   if (i+1<Cols.length) {    var sp = document.createElement('splitter'); cols.appendChild(sp);}
+   }
+var tc = tbl.getElementsByTagName('treechildren')[0];
+   //alert(Rows.length);
+for(i=0;i<Rows.length;i++) {
+  var r = Rows[i];
+	var tc = tbl.getElementsByTagName('treechildren')[0];
+	var ti = document.createElement('treeitem'); tc.appendChild(ti);
+	var tr = document.createElement('treerow');  ti.appendChild(tr);
+	
+	for(j=0;j<nc;j++) {
+	var tc = document.createElement('treecell');  tr.appendChild(tc);
+	tc.setAttribute('label',r);
+	}
+     }
+}
+
+
+//loadData(document.getElementById('mytree'),   ["One","Two","Three"],    ["345","Again","Again"]) ;
+  
+]]>
+</script>
+</window>
